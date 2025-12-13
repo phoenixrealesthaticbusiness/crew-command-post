@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, Eye } from 'lucide-react';
 
 type Agent = {
   id: string;
@@ -16,14 +16,20 @@ type Agent = {
   contact_person: string;
   email: string;
   phone: string;
-  status: string;
-  commission_rate: number;
-  created_at: string;
   address: string | null;
   city: string | null;
   state: string | null;
   country: string | null;
   pincode: string | null;
+  trade_licence_file: string;
+  trade_licence: string;
+  pan: string;
+  pan_file: any;
+  aadhaar_file: any;
+  aadhaar: string;
+  status: string;
+  commission_rate: number;
+  created_at: string;
 };
 
 export const AdminAgents = () => {
@@ -31,6 +37,7 @@ export const AdminAgents = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  const [viewingAgent, setViewingAgent] = useState<Agent | null>(null);
   const [formData, setFormData] = useState({
     company_name: '',
     contact_person: '',
@@ -41,7 +48,13 @@ export const AdminAgents = () => {
     city: '',
     state: '',
     country: '',
-    pincode: ''
+    pincode: '',
+    trade_licence: '', 
+    trade_licence_file: '',
+    pan: '',
+    pan_file: '',
+    aadhaar: '',
+    aadhaar_file: ''
   });
   const { toast } = useToast();
   const [showCredentials, setShowCredentials] = useState<{email: string, password: string} | null>(null);
@@ -161,6 +174,7 @@ export const AdminAgents = () => {
   };
 
   const handleEdit = (agent: Agent) => {
+    setViewingAgent(null);
     setEditingAgent(agent);
     setFormData({
       company_name: agent.company_name,
@@ -172,7 +186,13 @@ export const AdminAgents = () => {
       city: agent.city || '',
       state: agent.state || '',
       country: agent.country || '',
-      pincode: agent.pincode || ''
+      pincode: agent.pincode || '',
+      trade_licence: agent.trade_licence || '',
+      trade_licence_file: agent.trade_licence_file || '',
+      pan: '',
+      pan_file: '',
+      aadhaar: '',
+      aadhaar_file: ''
     });
     setIsDialogOpen(true);
   };
@@ -201,6 +221,33 @@ export const AdminAgents = () => {
       });
     }
   };
+  const updateAgentStatus = async (id: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from("agents")
+        .update({ status: newStatus })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status Updated",
+        description: `Agent status changed to ${newStatus}`,
+      });
+
+      fetchAgents();            // refresh table
+      setViewingAgent((prev) =>
+        prev ? { ...prev, status: newStatus } : prev
+      );
+
+    } catch (error) {
+      toast({
+        title: "Error updating status",
+        description: "Could not update agent status.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -213,7 +260,13 @@ export const AdminAgents = () => {
       city: '',
       state: '',
       country: '',
-      pincode: ''
+      pincode: '',
+      trade_licence: '', 
+      trade_licence_file: '',
+      pan: '',
+      pan_file: '',
+      aadhaar: '',
+      aadhaar_file: ''
     });
   };
 
@@ -239,7 +292,7 @@ export const AdminAgents = () => {
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={openCreateDialog}>
+              <Button onClick={() => { setViewingAgent(null); openCreateDialog(); }} >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Agent
               </Button>
@@ -400,6 +453,120 @@ export const AdminAgents = () => {
             </DialogContent>
           </Dialog>
         )}
+        {/* View Agent Details Dialog */}
+        {viewingAgent && (
+          <Dialog open={!!viewingAgent} onOpenChange={() => setViewingAgent(null)}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Agent Details</DialogTitle>
+                <DialogDescription>
+                  Full profile information of the selected agent.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="font-semibold">Agent Code</Label>
+                    <p>{viewingAgent.agent_code}</p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Status</Label>
+                    <p className="capitalize">{viewingAgent.status}</p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Company</Label>
+                    <p>{viewingAgent.company_name}</p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Contact Person</Label>
+                    <p>{viewingAgent.contact_person}</p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Email</Label>
+                    <p>{viewingAgent.email}</p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Phone</Label>
+                    <p>{viewingAgent.phone}</p>
+                  </div>
+
+                  {/* Address Section */}
+                  <div className="col-span-2">
+                    <Label className="font-semibold">Address</Label>
+                    <p>
+                      {viewingAgent.address || "—"}, {viewingAgent.city || "—"},{" "}
+                      {viewingAgent.state || "—"}, {viewingAgent.country || "—"},{" "}
+                      {viewingAgent.pincode || "—"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Trade Licence Number</Label>
+                    <p>{viewingAgent.trade_licence}</p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Trade Licence File</Label>
+                    <p><img src={`${viewingAgent.trade_licence_file}`} alt="Trade Licence" className="w-full max-h-64 object-contain rounded border border-gray-200" /></p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">PAN</Label>
+                    <p>{viewingAgent.pan}</p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">PAN File</Label>
+                    <p><img src={`${viewingAgent.pan_file}`} alt="Trade Licence" className="w-full max-h-64 object-contain rounded border border-gray-200" /></p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Aadhaar Number</Label>
+                    <p>{viewingAgent.aadhaar}</p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Aadhaar File</Label>
+                    <p><img src={`${viewingAgent.aadhaar_file}`} alt="Trade Licence" className="w-full max-h-64 object-contain rounded border border-gray-200" /></p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Commission Rate</Label>
+                    <p>{viewingAgent.commission_rate}%</p>
+                  </div>
+
+                  <div>
+                    <Label className="font-semibold">Created At</Label>
+                    <p>{new Date(viewingAgent.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <div>
+                  <Label className="font-semibold">Status</Label>
+                  <select
+                    className="w-full border rounded p-2"
+                    value={viewingAgent.status}
+                    onChange={(e) => updateAgentStatus(viewingAgent.id, e.target.value)}
+                  >
+                    <option value="">Select Status</option>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+
+                <Button onClick={() => setViewingAgent(null)} className="w-full">
+                  Close
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
         
         <Table>
           <TableHeader>
@@ -441,6 +608,17 @@ export const AdminAgents = () => {
                       className="h-8 w-8 p-0"
                     >
                       <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsDialogOpen(false);
+                        setViewingAgent(agent);
+                      }}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Eye className="h-4 w-4" />
                     </Button>
                     <Button
                       size="sm"
